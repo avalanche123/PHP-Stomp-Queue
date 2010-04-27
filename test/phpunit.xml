@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit colors="true" bootstrap="../autoload.php">
+	<testsuite name="Queue">
+		<directory>./</directory>
+	</testsuite>
+
+	<filter>
+		<whitelist>
+			<directory suffix=".php">../lib</directory>
+		</whitelist>
+	</filter>
+</phpunit>
