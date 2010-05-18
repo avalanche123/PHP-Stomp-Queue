@@ -77,11 +77,15 @@ class StompAdapter extends Zend_Queue_Adapter_AdapterAbstract {
 		return $this->_getOption('stompClientConnectionClass');
 	}
 
+	/**
+	 * @param array $headers
+	 */
 	public function connect() {
 		if (!$this->isConnected()) {
+			$headers = (4 === func_num_args()) ? (array) func_get_arg(3) : array();
 			$client = $this->getStompClient();
 			$response = $client->send(
-				$this->getConnectFrame()
+				$this->getConnectFrame($headers)
 			)->receive();
 			if ((false !== $response)
 				&& ($response->getCommand() != 'CONNECTED')
@@ -97,6 +101,9 @@ class StompAdapter extends Zend_Queue_Adapter_AdapterAbstract {
 		return $this;
 	}
 
+	/**
+	 * @param array $headers
+	 */
 	public function disconnect() {
 		if ($this->isConnected()) {
 			$client = $this->getStompClient();
@@ -112,14 +119,24 @@ class StompAdapter extends Zend_Queue_Adapter_AdapterAbstract {
 		$this->disconnect();
 	}
 
-	public function getDisconnectFrame() {
+	/**
+	 * @param array $headers
+	 */
+	public function getDisconnectFrame(array $headers = array()) {
 		$frame = $this->getStompClient()->createFrame();
 		$frame->setCommand('DISCONNECT');
+
+		foreach ($headers as $name => $header) {
+			$frame->setHeader($name, $header);
+		}
 
 		return $frame;
 	}
 
-	public function getConnectFrame() {
+	/**
+	 * @param array $headers
+	 */
+	public function getConnectFrame(array $headers = array()) {
 		$frame = $this->getStompClient()->createFrame();
 
         // Username and password are optional on some messaging servers
@@ -129,23 +146,44 @@ class StompAdapter extends Zend_Queue_Adapter_AdapterAbstract {
             $frame->setHeader('login', $username);
             $frame->setHeader('passcode', $this->getPassword());
         }
+
+		foreach ($headers as $name => $header) {
+			$frame->setHeader($name, $header);
+		}
+
 		return $frame;
 	}
 
-	public function getSubscribeFrame(Zend_Queue $queue) {
+	/**
+	 * @param Zend_Queue $queue
+	 * @param array $headers
+	 */
+	public function getSubscribeFrame(Zend_Queue $queue, array $headers = array()) {
 		$frame = $this->getStompClient()->createFrame();
 		$frame->setCommand('SUBSCRIBE');
 		$frame->setHeader('destination', $queue->getName());
 		$frame->setHeader('ack', 'client');
 		$frame->setHeader('no-local', 'true');
 
+		foreach ($headers as $name => $header) {
+			$frame->setHeader($name, $header);
+		}
+
 		return $frame;
 	}
 
-	public function getDeleteFrame(Zend_Queue_Message $message) {
+	/**
+	 * @param Zend_Queue_Message $message
+	 * @param array $headers
+	 */
+	public function getDeleteFrame(Zend_Queue_Message $message, array $headers = array()) {
 		$frame = $this->getStompClient()->createFrame();
 		$frame->setCommand('ACK');
 		$frame->setHeader('message-id', $message->handle);
+
+		foreach ($headers as $name => $header) {
+			$frame->setHeader($name, $header);
+		}
 
 		return $frame;
 	}
@@ -243,12 +281,22 @@ class StompAdapter extends Zend_Queue_Adapter_AdapterAbstract {
      * Messsage management functions
      *********************************************************************/
 
-	public function getSendFrame($message, Zend_Queue $queue) {
+	/**
+	 *
+	 * @param string $message
+	 * @param Zend_Queue $queue
+	 * @param array $headers
+	 * @return Zend_Queue_Stomp_Frame
+	 */
+	public function getSendFrame($message, Zend_Queue $queue, array $headers = array()) {
         $frame = $this->getStompClient()->createFrame();
         $frame->setCommand('SEND');
         $frame->setHeader('destination', $queue->getName());
         $frame->setHeader('content-length', strlen($message));
         $frame->setBody((string) $message);
+		foreach ($headers as $name => $header) {
+			$frame->setHeader($name, $header);
+		}
 		return $frame;
 	}
 
@@ -274,12 +322,14 @@ class StompAdapter extends Zend_Queue_Adapter_AdapterAbstract {
      *
      * @param  mixed $message Message to send to the active queue
      * @param  Zend_Queue|null $queue
+	 * @param  array $headers
      * @return Zend_Queue_Message
      */
     public function send($message, Zend_Queue $queue = null) {
+		$headers = (4 === func_num_args()) ? (array) func_get_arg(3) : array();
 		$this->connect();
 		$queue = $queue ?: $this->_queue;
-		$frame = $this->getSendFrame($message, $queue);
+		$frame = $this->getSendFrame($message, $queue, $headers);
 		$this->getStompClient()->send($frame);
 		$message = $this->getMessageFromFrame($frame, $queue);
 		return $message;
@@ -291,14 +341,16 @@ class StompAdapter extends Zend_Queue_Adapter_AdapterAbstract {
      * @param  integer|null $maxMessages Maximum number of messages to return
      * @param  integer|null $timeout Visibility timeout for these messages
      * @param  Zend_Queue|null $queue
+	 * @param  array $headers
      * @return Zend_Queue_Message_Iterator
      */
     public function receive($maxMessages = null, $timeout = null, Zend_Queue $queue = null) {
+		$headers = (4 === func_num_args()) ? (array) func_get_arg(3) : array();
 		$this->connect();
 		$queue = $queue ?: $this->_queue;
 		$timeout = (float) $timeout ?: self::RECEIVE_TIMEOUT_DEFAULT;
 		$maxMessages = (int) $maxMessages ?: 1;
-		$this->getStompClient()->send($this->getSubscribeFrame($queue));
+		$this->getStompClient()->send($this->getSubscribeFrame($queue, $headers));
 
 		$start = microtime(true);
 		$frameClass = $this->getStompClientFrameClass();
@@ -332,11 +384,13 @@ class StompAdapter extends Zend_Queue_Adapter_AdapterAbstract {
      * unsuccessful.
      *
      * @param  Zend_Queue_Message $message
+	 * @param  array $headers
      * @return boolean
      */
     public function deleteMessage(Zend_Queue_Message $message) {
+		$headers = (4 === func_num_args()) ? (array) func_get_arg(3) : array();
 		$this->connect();
-		$frame = $this->getDeleteFrame($message);
+		$frame = $this->getDeleteFrame($message, $headers);
 		$this->getStompClient()->send($frame);
 
 		return true;

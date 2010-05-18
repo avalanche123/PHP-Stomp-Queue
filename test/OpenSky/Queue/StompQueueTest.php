@@ -102,6 +102,12 @@ class StompQueueTest extends \PHPUnit_Framework_TestCase {
 		$this->assertEquals(strlen($messageBody), $frame->getHeader('content-length'));
 		$this->assertEquals($queueFacade->getName(), $frame->getHeader('destination'));
 		$this->assertEquals('SEND', $frame->getCommand());
+
+		unset ($frame);
+
+		$frame = $queue->getSendFrame($messageBody, $queueFacade, array('OPENSKY_MESSAGE_LIMIT' => 1));
+		$this->assertEquals('1', $frame->getHeader('OPENSKY_MESSAGE_LIMIT'));
+
 		return $frame;
 	}
 
@@ -223,6 +229,11 @@ class StompQueueTest extends \PHPUnit_Framework_TestCase {
 		$this->assertEquals('client', $frame->getHeader('ack'));
 		$this->assertEquals('true', $frame->getHeader('no-local'));
 		$this->assertEquals('SUBSCRIBE', $frame->getCommand());
+
+		unset ($frame);
+
+		$frame = $this->_queue->getSubscribeFrame($destination, array('OPENSKY_MESSAGE_LIMIT' => '1'));
+		$this->assertEquals('1', $frame->getHeader('OPENSKY_MESSAGE_LIMIT'));
 	}
 
 	public function testShouldCreateCorrectDeleteFrame() {
