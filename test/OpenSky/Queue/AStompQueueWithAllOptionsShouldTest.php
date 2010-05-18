@@ -13,30 +13,30 @@ namespace OpenSky\Queue;
  */
 class AStompQueueWithAllOptionsShouldTest extends \PHPUnit_Framework_TestCase {
 
-	private $options = array(
-		'username'	=> 'system',
-		'password'	=> 'manager',
-		'host'		=> 'localhost',
-		'scheme'	=> 'tcp',
-		'port'		=> '61613'
-	);
+    private $options = array(
+        'username'    => 'system',
+        'password'    => 'manager',
+        'host'        => 'localhost',
+        'scheme'    => 'tcp',
+        'port'        => '61613'
+    );
 
-	private $queue;
+    private $queue;
 
-	public function setUp() {
-		$this->queue = new StompAdapter($this->options);
-	}
+    public function setUp() {
+        $this->queue = new StompAdapter($this->options);
+    }
 
-	public function tearDown() {
-		$this->queue = null;
-	}
+    public function tearDown() {
+        $this->queue = null;
+    }
 
-	public function testHaveAllOptions() {
-		$this->assertEquals($this->options['username'], $this->queue->getUsername());
-		$this->assertEquals($this->options['password'], $this->queue->getPassword());
-		$this->assertEquals($this->options['host'], $this->queue->getHost());
-		$this->assertEquals($this->options['scheme'], $this->queue->getScheme());
-		$this->assertEquals($this->options['port'], $this->queue->getPort());
-	}
+    public function testHaveAllOptions() {
+        $this->assertEquals($this->options['username'], $this->queue->getUsername());
+        $this->assertEquals($this->options['password'], $this->queue->getPassword());
+        $this->assertEquals($this->options['host'], $this->queue->getHost());
+        $this->assertEquals($this->options['scheme'], $this->queue->getScheme());
+        $this->assertEquals($this->options['port'], $this->queue->getPort());
+    }
 
 }
